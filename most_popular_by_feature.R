@@ -6,31 +6,45 @@ library(Metrics)
 
 load("/Users/alexpapiu/Documents/Data/expedia.RData")
 
-truth = as.list(val$hotel_cluster) #we need this for the validation
+
+train %>% count(srch_destination_id) %>% arrange(desc(n)) -> dest
 
 #top clusters for given feature:
 train %>%
-    count(hotel_continent, hotel_cluster) %>%
+    count(srch_destination_id, hotel_cluster) %>%
     arrange(desc(n)) %>% 
     top_n(5, n) %>% 
     mutate(obs = paste0("y_", 1:n())) %>% 
     select(-n) %>% 
     spread(obs, hotel_cluster) %>% 
-    select(hotel_continent, y_1, y_2, y_3, y_4, y_5) -> top_5
+    select(srch_destination_id, y_1, y_2, y_3, y_4, y_5) -> top_5
+
+#let's try to get only the booked ones:
+#val = filter(val, is_booking == TRUE)
+
+truth = as.list(val$hotel_cluster) #we need this for the validation
 
 
 #for validation set:
-right_join(top_5, val, by = "hotel_continent") -> temp
-preds_city <- temp[,2:6]
+right_join(top_5, val, by = "srch_destination_id") -> temp
 preds <-  temp[,2:6]
 as.list(as.data.frame(t(preds))) -> preds #converts to a list
 mapk(5, truth, preds) #the metric for the competition
 
-# 0.3121058 for srch_destination_type_id - maybe overfitting?
+#for 100k examples: 80k train, 20k test
+
+##0.4332843 for the training set with 
+
+# 0.3121058 for srch_destination_id - maybe overfitting?
 # 0.1145858 for hotel_continent
 # 0.1815508 for user_location_city
 #0.07081833 for is_package
 #0.05839083 for is_booking
+
+#for 5mil examples:
+#[1] 0.4713424
+#[1] 0.4762485 with user_location_city added on 5 mil examples
+
 
 #how to combine these predictions?
 #maybe feed them into xgboost once we're done.
@@ -62,7 +76,6 @@ as.list(as.data.frame(t(preds))) -> preds #converts to a list
 mapk(5, truth, preds) #the metric for the competition
 
 #0.3152217 slight improvmnt.
-
 
 
 
