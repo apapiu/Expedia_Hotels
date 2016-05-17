@@ -4,18 +4,24 @@
 load("/Users/alexpapiu/Documents/Data/expedia.RData")
 truth = as.list(val$hotel_cluster) #we need this for the validation
 
-#only select stuff we're interested in:
-small_val <- select(val, srch_destination_id, user_location_city)
+small_val <- select(val, hotel_continent, srch_destination_id)
 
 
 #top counts for different variables:
 train %>%
-    count(user_location_city, hotel_cluster) %>%
+    count(hotel_continent, hotel_cluster) %>%
     arrange(desc(n)) %>%
     spread(hotel_cluster, n, fill = 0) -> hotel_continent
 
+#a more efficient way to keep track:
+X = hotel_continent[,2:100, with = FALSE]
+X = X/rowSums(X)
+rownames(X) <- hotel_continent$hotel_continent
+
+
+
 small_val_cont <- right_join(hotel_continent, small_val,
-                             by = "user_location_city")
+                             by = "hotel_continent")
 
 
 train %>%
@@ -23,12 +29,17 @@ train %>%
     arrange(desc(n)) %>%
     spread(hotel_cluster, n, fill = 0) -> srch_destination_id
 
+X1 = srch_destination_id[,2:100, with = FALSE]
+X1 = X1/rowSums(X1)
+rownames(X1) <- srch_destination_id$srch_destination_id
+
+
 small_val_srch_id <- right_join(srch_destination_id, small_val, 
-                        by = "srch_destination_id")
+                                by = "srch_destination_id")
 
 #makes the counts numeric and then fractions:
-X_1 = as.matrix(select(small_val_cont, - user_location_city, srch_destination_id))[,1:100]
-X_2 = as.matrix(select(small_val_srch_id, - srch_destination_id, user_location_city))[,1:100]
+X_1 = as.matrix(select(small_val_cont, - hotel_continent, srch_destination_id))[,1:100]
+X_2 = as.matrix(select(small_val_srch_id, - srch_destination_id, hotel_continent))[,1:100]
 
 X_1 = X_1/rowSums(X_1)
 X_2 = X_2/rowSums(X_2)
@@ -40,5 +51,4 @@ lapply(1:dim(X_1)[1], function(i) {
 }) -> preds
 
 mapk(5, truth, preds) #the metric for the competition
-
 
